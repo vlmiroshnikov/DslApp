@@ -1,0 +1,101 @@
+////////////////////////////////////////////////////////////////////////////////
+// Imagine that an external system provides you an API to query for data.
+// Datum (an item) is described by a set of key-value pairs (called properties).
+// Basically, you can either run an exact query (for items matching a particular
+// property value) or you can run range queries. You can also compose
+// boolean expressions out of these queries.
+
+trait Item {
+  // Returns value for a given property.
+  def apply(prop: String): Option[Any]
+}
+
+trait Filter {
+}
+
+// Queries an external system for items matching the specified filter.
+def query(f: Filter): Seq[Item]
+
+// Accepts an item iff all descendant filters accept the item.
+trait AndFilter extends Filter {
+  def must(f: Filter)
+}
+
+// Factory method.
+def createAndFilter(): AndFilter
+
+// Accepts an item iff any of descendant filters accept the item.
+trait OrFilter extends Filter {
+  def either(f: Filter)
+}
+
+// Factory method.
+def createOrFilter(): OrFilter
+
+// Accepts an item iff its property value falls within the specified range.
+trait RangeFilter extends Filter {
+  def prop(): String
+  def setLowerBound(lb: Any, inclusive: Boolean = false)
+  def setUpperBound(ub: Any, inclusive: Boolean = false)
+  def clearLowerBound()
+  def clearUpperBound()
+}
+
+// Factory method.
+def createRangeFilter(prop: String): RangeFilter
+
+// Accepts an item iff its property value matches one of the specified values.
+trait ExactFilter extends Filter {
+  def prop(): String
+  def add(v: Any)
+}
+
+// Factory method.
+def createExactFilter(prop: String): ExactFilter
+
+////////////////////////////////////////////////////////////////////////////////
+// Your ultimate goal is to provide user with a friendly expression language
+// to build filters. Consider the following language grammar:
+//
+// <string>   ::= quoted string literal
+// <integer>  ::= base-10 integer literal
+// <value>    ::= <string> | <integer>
+// <property> ::= "prop" "[" <string> "]"
+//
+// <disjunct-expr> ::= <conjunct-expr> ("||" <conjunct-expr>)*
+// <conjunct-expr> ::= <atom-expr> ("&&" <atom-expr>)*
+// <atom-expr>     ::= "(" <disjunct-expr> ")" | <base-expr>
+// <base-expr>     ::= <property> "="  <value> |
+//                     <property> ">"  <value> |
+//                     <property> ">=" <value> |
+//                     <property> "<"  <value> |
+//                     <property> "<=" <value>
+//
+// This language accepts strings like
+//   (ex.1) prop["country"] = "RU" || prop["country"] = "UA"`
+//   (ex.2) prop["age"] >= 18 && prop["age"] < 24
+//
+// Your goal is to write a function which takes a string and constructs
+// a corresponding filter, e. g.
+
+def buildFilter(expr: String): Try[Filter] = ???
+
+// For (ex.1) one possible filter could be constructed in the following way:
+//   ```
+//   g = createExactFilter("country"); g.add("RU");
+//   h = createExactFilter("country"); h.add("UA");
+//   f = createOrFilter(); f.either(g); f.either(h);
+//   ```
+//
+// For (ex.2) one possible filter could be constructed in the following way:
+//   ```
+//   g = createRangeFilter("age"); g.setLowerBound(18, true);
+//   h = createRangeFilter("age"); h.setUpperBound(24, false);
+//   f = createAndFilter(); f.must(g); f.must(h);
+//   ```
+//
+// For bonus points please implement or outline modifications that would
+// allow to fold (ex.1) to a single filter
+//   `f = createExactFilter("country"); f.add("RU"); f.add("UA");`
+// and to fold (ex.2) to a single filter
+//   `f = createRangeFilter("age"); f.setLowerBound(18, true); f.setUpperBound(24, false);`
